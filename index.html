@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF1F4;
+  --surface: #FFFFFF;
+  --ink: #18283A;
+  --muted: #5B6977;
+  --line: #CCD5DD;
+  --accent: #2950D6;
+  --accent-ink: #FFFFFF;
+  --fresh: #A86E00;
+  --fresh-bg: #FFF1D6;
+  --error-bg: #FDE8E8;
+  --error-ink: #9B1C1C;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #111A24;
+    --surface: #18232F;
+    --ink: #E4EAF0;
+    --muted: #9AA8B5;
+    --line: #2C3A48;
+    --accent: #7E9BFF;
+    --accent-ink: #0E1620;
+    --fresh: #F2B84B;
+    --fresh-bg: #3A2C10;
+    --error-bg: #3B1717;
+    --error-ink: #FFB4B4;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: 40px 20px 80px; }
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 20px; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+.link-btn { background: none; border: none; color: var(--accent); font: inherit; font-size: 0.9rem; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.searchbar { display: flex; background: var(--surface); border: 2px solid var(--ink); border-radius: 14px; overflow: hidden; max-width: 860px; }
+.searchbar input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--ink); font-family: var(--serif); font-size: 1.45rem; padding: 18px 20px; }
+.searchbar input::placeholder { color: var(--muted); font-style: italic; }
+.searchbar input:focus-visible { outline: none; }
+.searchbar:focus-within { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); }
+.searchbar button { border: none; background: var(--ink); color: var(--bg); font: 600 1rem var(--sans); padding: 0 26px; cursor: pointer; }
+.searchbar button:hover { background: var(--accent); color: var(--accent-ink); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin: 16px 0 6px; font-size: 0.92rem; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg button { border: none; background: transparent; color: var(--ink); font: 500 0.86rem var(--sans); padding: 6px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.controls label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--ink); }
+.controls .group { display: inline-flex; gap: 8px; align-items: center; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 16px 0; max-width: 860px; }
+.panel h2 { font-family: var(--serif); font-size: 1.15rem; margin: 0 0 8px; }
+.panel ol { margin: 8px 0 12px; padding-left: 20px; }
+.panel .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.panel input { flex: 1; min-width: 200px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: 0.95rem var(--sans); }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--bg); border-radius: 8px; padding: 9px 16px; font: 600 0.9rem var(--sans); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--ink); }
+.note { font-size: 0.85rem; color: var(--muted); margin: 8px 0 0; }
+
+.layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 36px; align-items: start; margin-top: 18px; }
+.layout.no-facets { grid-template-columns: minmax(0, 1fr); }
+.layout.no-facets .filters { display: none; }
+
+.filters summary { display: none; }
+.filters-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.filters-head h2 { font-family: var(--serif); font-size: 1.15rem; margin: 0; }
+.facet { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 8px; margin-bottom: 14px; }
+.facet h3 { font-size: 0.95rem; font-weight: 600; margin: 0 0 6px; }
+.facet ul { list-style: none; margin: 0; padding: 0; }
+.facet li label { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: start; padding: 5px 0; font-size: 0.88rem; line-height: 1.35; cursor: pointer; }
+.facet input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+.facet .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.facet .more { display: block; margin-left: auto; font-size: 0.82rem; }
+.facet .wait { color: var(--muted); font-size: 0.85rem; padding: 4px 0 8px; }
+
+.status { margin: 0 0 10px; font-size: 0.92rem; color: var(--muted); min-height: 1.4em; }
+.error { background: var(--error-bg); color: var(--error-ink); border-radius: 10px; padding: 12px 16px; margin: 16px 0; max-width: 860px; }
+
+.results { list-style: none; margin: 0; padding: 0; }
+.paper { display: grid; grid-template-columns: 28px 1fr; gap: 4px 10px; padding: 18px 0; border-top: 1px solid var(--line); }
+.paper > input[type=checkbox] { margin-top: 7px; width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+.paper h3 { font-family: var(--serif); font-weight: 600; font-size: 1.22rem; line-height: 1.3; margin: 0; }
+.paper h3 a { color: var(--ink); text-decoration: none; }
+.paper h3 a:hover { color: var(--accent); text-decoration: underline; }
+.meta { font-size: 0.88rem; color: var(--muted); margin-top: 4px; }
+.meta span + span::before { content: ", "; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 0.85rem; }
+.badge-new { background: var(--fresh-bg); color: var(--fresh); font-weight: 600; padding: 1px 8px; border-radius: 4px; }
+.facts a { color: var(--accent); }
+.abstract { font-family: var(--serif); font-size: 1.02rem; line-height: 1.6; margin: 8px 0 0; max-width: 72ch; }
+.abstract.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.paper .body { grid-column: 2; min-width: 0; }
+
+.more-btn { display: block; margin: 24px auto 0; }
+.tray { position: sticky; bottom: 16px; margin-top: 24px; display: none; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 12px 16px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tray.show { display: flex; }
+.tray .btn { background: var(--bg); color: var(--ink); border-color: var(--bg); }
+.tray .btn.ghost { background: transparent; color: var(--bg); }
+.empty { color: var(--muted); padding: 40px 0; font-family: var(--serif); font-size: 1.1rem; }
+
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .filters summary { display: block; cursor: pointer; font-weight: 600; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+  .filters-head h2 { display: none; }
+}
+@media (max-width: 560px) {
+  .wrap { padding-top: 24px; }
+  .searchbar input { font-size: 1.15rem; padding: 14px; }
+  .searchbar button { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Paper Finder</h1>
+    <button class="link-btn" id="toggleKey" type="button">API key</button>
+  </header>
+
+  <section class="panel" id="keyPanel" hidden>
+    <h2>Connect your free OpenAlex key</h2>
+    <p class="note" style="margin-top:0">OpenAlex indexes over 450 million papers, including arXiv preprints. Searches work without a key for a handful of tries a day; a free key lifts that limit.</p>
+    <ol>
+      <li>Create a free account at <a href="https://openalex.org" target="_blank" rel="noopener">openalex.org</a>.</li>
+      <li>Open <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">openalex.org/settings/api</a> and copy your key.</li>
+      <li>Paste it below and save. It stays in this browser only.</li>
+    </ol>
+    <div class="row">
+      <input id="keyInput" type="password" placeholder="Paste your OpenAlex API key" autocomplete="off">
+      <button class="btn" id="saveKey" type="button">Save key</button>
+      <button class="btn ghost" id="clearKey" type="button">Remove</button>
+    </div>
+    <p class="note" id="keyNote"></p>
+  </section>
+
+  <form class="searchbar" id="searchForm" role="search">
+    <input id="q" type="search" placeholder="e.g. solid-state battery electrolytes" aria-label="Research topic" autocomplete="off">
+    <button type="submit">Search</button>
+  </form>
+
+  <div class="controls">
+    <div class="group"><span>Published</span>
+      <div class="seg" id="rangeSeg" role="group" aria-label="Publication window">
+        <button type="button" data-v="30">Past month</button>
+        <button type="button" data-v="365" aria-pressed="true">Past year</button>
+        <button type="button" data-v="1095">3 years</button>
+        <button type="button" data-v="0">Any time</button>
+      </div>
+    </div>
+    <div class="group"><span>Sort</span>
+      <div class="seg" id="sortSeg" role="group" aria-label="Sort order">
+        <button type="button" data-v="relevance_score:desc" aria-pressed="true">Best match</button>
+        <button type="button" data-v="publication_date:desc">Newest</button>
+        <button type="button" data-v="cited_by_count:desc">Most cited</button>
+      </div>
+    </div>
+    <label><input type="checkbox" id="absOnly" checked> Only papers with abstracts</label>
+  </div>
+
+  <div class="error" id="error" hidden></div>
+
+  <div class="layout no-facets" id="layout">
+    <aside>
+      <details class="filters" id="filters">
+        <summary>Filters</summary>
+        <div class="filters-head">
+          <h2>Narrow results</h2>
+          <button class="link-btn" id="clearFacets" type="button" hidden>Clear filters</button>
+        </div>
+        <div id="facetBox"></div>
+      </details>
+    </aside>
+    <main>
+      <div class="status" id="status" aria-live="polite"></div>
+      <ul class="results" id="results"></ul>
+      <button class="btn ghost more-btn" id="moreBtn" type="button" hidden>Load more papers</button>
+      <div class="tray" id="tray">
+        <span id="trayCount"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="copyClaude" type="button">Copy for Claude</button>
+          <button class="btn ghost" id="csvBtn" type="button">Download CSV</button>
+          <button class="btn ghost" id="clearSel" type="button">Clear</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  var API = "https://api.openalex.org/works";
+  var FIELDS = "id,doi,display_name,publication_date,authorships,primary_location,cited_by_count,open_access,abstract_inverted_index,type";
+  var FACETS = [
+    { key: "topic", title: "Topic", field: "primary_topic.id" },
+    { key: "inst", title: "Institution", field: "authorships.institutions.id" },
+    { key: "type", title: "Type", field: "type" },
+    { key: "oa", title: "Access", field: "open_access.is_oa", labels: { "true": "Free to read", "false": "Paywalled" } },
+    { key: "cites", title: "Citations", kind: "buckets", buckets: [
+      { id: "0", label: "Not cited yet", f: "cited_by_count:0" },
+      { id: "1-9", label: "1–9", f: "cited_by_count:>0,cited_by_count:<10" },
+      { id: "10-49", label: "10–49", f: "cited_by_count:>9,cited_by_count:<50" },
+      { id: "50-249", label: "50–249", f: "cited_by_count:>49,cited_by_count:<250" },
+      { id: "250+", label: "250 or more", f: "cited_by_count:>249" }
+    ] },
+    { key: "year", title: "Year", field: "publication_year", byValue: true }
+  ];
+  var state = {
+    query: "", range: "365", sort: "relevance_score:desc", page: 1,
+    papers: [], selected: {}, total: 0, useSelect: true,
+    picks: { topic: {}, inst: {}, type: {}, oa: {}, cites: {}, year: {} },
+    expanded: {}, searchId: 0
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function getKey() { try { return localStorage.getItem("openalex_key") || ""; } catch (e) { return ""; } }
+  function setKey(v) { try { v ? localStorage.setItem("openalex_key", v) : localStorage.removeItem("openalex_key"); } catch (e) {} }
+  function refreshKeyUI() {
+    var k = getKey();
+    $("toggleKey").textContent = k ? "API key saved" : "Add API key";
+    $("keyNote").textContent = k ? "A key is saved in this browser." : "No key saved yet.";
+  }
+  $("toggleKey").addEventListener("click", function () { $("keyPanel").hidden = !$("keyPanel").hidden; });
+  $("saveKey").addEventListener("click", function () {
+    var v = $("keyInput").value.trim();
+    if (!v) { $("keyNote").textContent = "Paste a key first."; return; }
+    setKey(v); $("keyInput").value = ""; refreshKeyUI(); $("keyPanel").hidden = true;
+  });
+  $("clearKey").addEventListener("click", function () { setKey(""); refreshKeyUI(); });
+
+  function wireSeg(id, prop) {
+    var seg = $(id);
+    seg.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      seg.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      state[prop] = b.dataset.v;
+      if (state.query) runSearch(true);
+    });
+  }
+  wireSeg("rangeSeg", "range");
+  wireSeg("sortSeg", "sort");
+  $("absOnly").addEventListener("change", function () { if (state.query) runSearch(true); });
+
+  $("searchForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = $("q").value.trim();
+    if (!q) { $("q").focus(); return; }
+    state.query = q;
+    clearPicks();
+    runSearch(true);
+  });
+  $("moreBtn").addEventListener("click", function () { state.page++; runSearch(false); });
+  $("clearFacets").addEventListener("click", function () { clearPicks(); runSearch(true); });
+
+  function clearPicks() { FACETS.forEach(function (f) { state.picks[f.key] = {}; }); state.expanded = {}; }
+  function anyPicks() { return FACETS.some(function (f) { return Object.keys(state.picks[f.key]).length > 0; }); }
+
+  function isoDaysAgo(days) { return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10); }
+
+  // Filters for the search; skipKey leaves out one panel's own ticks so its other options stay visible.
+  function filterString(skipKey) {
+    var f = ["to_publication_date:" + isoDaysAgo(0)];
+    if (state.range !== "0") f.push("from_publication_date:" + isoDaysAgo(parseInt(state.range, 10)));
+    if ($("absOnly").checked) f.push("has_abstract:true");
+    FACETS.forEach(function (fc) {
+      if (fc.key === skipKey) return;
+      var ids = Object.keys(state.picks[fc.key]);
+      if (fc.kind === "buckets") {
+        var b = fc.buckets.filter(function (x) { return x.id === ids[0]; })[0];
+        if (b) f.push(b.f);
+        return;
+      }
+      if (ids.length) f.push(fc.field + ":" + ids.join("|"));
+    });
+    return f.join(",");
+  }
+
+  function withKey(p) { var k = getKey(); if (k) p.set("api_key", k); return p; }
+
+  function worksUrl() {
+    var p = new URLSearchParams();
+    p.set("search", state.query);
+    p.set("filter", filterString(null));
+    p.set("sort", state.sort);
+    p.set("per-page", "25");
+    p.set("page", String(state.page));
+    if (state.useSelect) p.set("select", FIELDS);
+    return API + "?" + withKey(p).toString();
+  }
+
+  function facetUrl(fc) {
+    var p = new URLSearchParams();
+    p.set("search", state.query);
+    p.set("filter", filterString(fc.key));
+    p.set("group_by", fc.field);
+    return API + "?" + withKey(p).toString();
+  }
+
+  function showError(msg) { var el = $("error"); el.textContent = msg; el.hidden = !msg; }
+
+  async function runSearch(reset) {
+    var myId = ++state.searchId;
+    if (reset) { state.page = 1; state.papers = []; $("results").innerHTML = ""; }
+    showError("");
+    $("moreBtn").hidden = true;
+    $("status").textContent = reset ? "Searching…" : "Loading more…";
+    var res;
+    try {
+      res = await fetch(worksUrl());
+    } catch (netErr) {
+      $("status").textContent = "Checking the connection…";
+      var why = await diagnose();
+      $("status").textContent = "";
+      showError(why);
+      return;
+    }
+    if (myId !== state.searchId) return;
+    try {
+      if (res.status === 400 && state.useSelect) { state.useSelect = false; return runSearch(reset); }
+      if (res.status === 401 || res.status === 403) throw new Error("OpenAlex didn’t accept the API key. Check it under “API key” at the top and save it again.");
+      if (res.status === 409 || res.status === 429) throw new Error(getKey()
+        ? "You’ve hit today’s OpenAlex limit for this key. Try again tomorrow."
+        : "The no-key allowance for today is used up. Add your free OpenAlex key (top right) to keep searching.");
+      if (!res.ok) throw new Error("OpenAlex returned an error (" + res.status + "). Try a simpler search.");
+      var data = await res.json();
+      if (myId !== state.searchId) return;
+      state.total = (data.meta && data.meta.count) || 0;
+      var items = (data.results || []).map(normalize);
+      state.papers = state.papers.concat(items);
+      items.forEach(renderPaper);
+      renderStatus();
+      $("moreBtn").hidden = state.papers.length >= state.total || items.length === 0;
+      if (reset) loadFacets(myId);
+    } catch (err) {
+      $("status").textContent = "";
+      showError((err && err.message) || "Something went wrong while showing the results.");
+    }
+  }
+
+  // ---------- Filter panels ----------
+  function shortId(key) { return String(key).split("/").pop(); }
+
+  function loadFacets(myId) {
+    $("layout").classList.remove("no-facets");
+    $("clearFacets").hidden = !anyPicks();
+    var box = $("facetBox");
+    box.innerHTML = "";
+    FACETS.forEach(function (fc) {
+      var sec = document.createElement("section");
+      sec.className = "facet";
+      sec.innerHTML = '<h3></h3><div class="wait">Counting…</div>';
+      sec.querySelector("h3").textContent = fc.title;
+      box.appendChild(sec);
+      if (fc.kind === "buckets") { loadBuckets(sec, fc, myId); return; }
+      fetch(facetUrl(fc))
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) {
+          if (myId !== state.searchId) return;
+          var groups = (d.group_by || [])
+            .filter(function (g) { return g.key != null && g.key !== "unknown" && g.count > 0; })
+            .map(function (g) {
+              var id = shortId(g.key);
+              var label = (fc.labels && fc.labels[id]) || g.key_display_name || id;
+              return { id: id, label: label, count: g.count };
+            });
+          if (fc.byValue) groups.sort(function (a, b) { return Number(b.id) - Number(a.id); });
+          if (fc.labels) groups.sort(function (a, b) { return a.id === "true" ? -1 : b.id === "true" ? 1 : 0; });
+          renderFacet(sec, fc, groups);
+        })
+        .catch(function () {
+          if (myId !== state.searchId) return;
+          sec.querySelector(".wait").textContent = "Couldn’t load this list.";
+        });
+    });
+  }
+
+  // Citations: one quick count per range, since OpenAlex can't group by ranges directly.
+  function loadBuckets(sec, fc, myId) {
+    var base = filterString(fc.key);
+    Promise.all(fc.buckets.map(function (b) {
+      var p = new URLSearchParams();
+      p.set("search", state.query);
+      p.set("filter", base + "," + b.f);
+      p.set("per-page", "1");
+      p.set("select", "id");
+      return fetch(API + "?" + withKey(p).toString())
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) { return (d.meta && d.meta.count) || 0; });
+    }))
+      .then(function (counts) {
+        if (myId !== state.searchId) return;
+        renderBuckets(sec, fc, counts);
+      })
+      .catch(function () {
+        if (myId !== state.searchId) return;
+        sec.querySelector(".wait").textContent = "Couldn’t load this list.";
+      });
+  }
+
+  function renderBuckets(sec, fc, counts) {
+    sec.innerHTML = "";
+    var h = document.createElement("h3"); h.textContent = fc.title; sec.appendChild(h);
+    var current = Object.keys(state.picks[fc.key])[0] || "";
+    var ul = document.createElement("ul");
+    var rows = [{ id: "", label: "Any", count: null }].concat(fc.buckets.map(function (b, i) {
+      return { id: b.id, label: b.label, count: counts[i] };
+    }));
+    rows.forEach(function (r) {
+      var li = document.createElement("li");
+      var lab = document.createElement("label");
+      var rb = document.createElement("input");
+      rb.type = "radio"; rb.name = "facet-" + fc.key; rb.checked = r.id === current;
+      rb.addEventListener("change", function () {
+        state.picks[fc.key] = {};
+        if (r.id) state.picks[fc.key][r.id] = r.label;
+        runSearch(true);
+      });
+      var name = document.createElement("span"); name.textContent = r.label;
+      var cnt = document.createElement("span"); cnt.className = "count";
+      cnt.textContent = r.count == null ? "" : r.count.toLocaleString();
+      lab.appendChild(rb); lab.appendChild(name); lab.appendChild(cnt);
+      li.appendChild(lab); ul.appendChild(li);
+    });
+    sec.appendChild(ul);
+  }
+
+  function renderFacet(sec, fc, groups) {
+    sec.innerHTML = "";
+    var h = document.createElement("h3"); h.textContent = fc.title; sec.appendChild(h);
+    if (!groups.length) {
+      var w = document.createElement("div"); w.className = "wait"; w.textContent = "Nothing to show."; sec.appendChild(w); return;
+    }
+    var picks = state.picks[fc.key];
+    var limit = state.expanded[fc.key] ? 15 : 5;
+    var shown = groups.slice(0, limit);
+    // Keep ticked items visible even if they fall outside the top of the list.
+    groups.slice(limit).forEach(function (g) { if (picks[g.id]) shown.push(g); });
+    var ul = document.createElement("ul");
+    shown.forEach(function (g) {
+      var li = document.createElement("li");
+      var lab = document.createElement("label");
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!picks[g.id];
+      cb.addEventListener("change", function () {
+        if (cb.checked) picks[g.id] = g.label; else delete picks[g.id];
+        runSearch(true);
+      });
+      var name = document.createElement("span"); name.textContent = g.label;
+      var cnt = document.createElement("span"); cnt.className = "count"; cnt.textContent = g.count.toLocaleString();
+      lab.appendChild(cb); lab.appendChild(name); lab.appendChild(cnt);
+      li.appendChild(lab); ul.appendChild(li);
+    });
+    sec.appendChild(ul);
+    if (groups.length > 5) {
+      var more = document.createElement("button");
+      more.type = "button"; more.className = "link-btn more";
+      more.textContent = state.expanded[fc.key] ? "Show fewer" : "Show more";
+      more.addEventListener("click", function () {
+        state.expanded[fc.key] = !state.expanded[fc.key];
+        renderFacet(sec, fc, groups);
+      });
+      sec.appendChild(more);
+    }
+  }
+
+  // ---------- Results ----------
+  function renderStatus() {
+    if (!state.papers.length) {
+      $("status").textContent = "";
+      $("results").innerHTML = '<li class="empty">No papers match that search with these filters. Try “Any time”, clear some filters, or use broader wording.</li>';
+      return;
+    }
+    $("status").textContent = "Showing " + state.papers.length + " of " + state.total.toLocaleString() + " papers";
+  }
+
+  function rebuildAbstract(inv) {
+    if (!inv) return "";
+    var words = [];
+    Object.keys(inv).forEach(function (w) { (inv[w] || []).forEach(function (i) { words[i] = w; }); });
+    return words.join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  function normalize(w) {
+    var loc = w.primary_location || {};
+    var src = loc.source || {};
+    var authors = (w.authorships || []).map(function (a) { return a.author && a.author.display_name; }).filter(Boolean);
+    return {
+      id: w.id,
+      title: w.display_name || "Untitled",
+      date: w.publication_date || "",
+      authors: authors,
+      venue: src.display_name || "",
+      cites: w.cited_by_count || 0,
+      oa: (w.open_access && w.open_access.oa_url) || "",
+      type: shortId(w.type || ""),
+      link: w.doi || loc.landing_page_url || w.id,
+      abstract: rebuildAbstract(w.abstract_inverted_index)
+    };
+  }
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  function renderPaper(p) {
+    var li = el("li", "paper");
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.setAttribute("aria-label", "Select " + p.title);
+    cb.checked = !!state.selected[p.id];
+    cb.addEventListener("change", function () {
+      if (cb.checked) state.selected[p.id] = p; else delete state.selected[p.id];
+      updateTray();
+    });
+    li.appendChild(cb);
+
+    var body = el("div", "body");
+    var h = el("h3"); var a = el("a", null, p.title);
+    a.href = p.link; a.target = "_blank"; a.rel = "noopener";
+    h.appendChild(a); body.appendChild(h);
+
+    var meta = el("div", "meta");
+    var authorText = p.authors.slice(0, 4).join(", ") + (p.authors.length > 4 ? " et al." : "");
+    if (authorText) meta.appendChild(el("span", null, authorText));
+    if (p.venue) meta.appendChild(el("span", null, p.venue));
+    body.appendChild(meta);
+
+    var facts = el("div", "facts");
+    var ageDays = p.date ? (Date.now() - new Date(p.date + "T00:00:00").getTime()) / 86400000 : 9999;
+    if (ageDays <= 30) facts.appendChild(el("span", "badge-new", "New"));
+    if (p.date) facts.appendChild(el("span", null, fmtDate(p.date)));
+    facts.appendChild(el("span", null, p.cites.toLocaleString() + (p.cites === 1 ? " citation" : " citations")));
+    if (p.type === "preprint") facts.appendChild(el("span", null, "Preprint, not peer-reviewed"));
+    if (p.oa) { var oa = el("a", null, "Free full text"); oa.href = p.oa; oa.target = "_blank"; oa.rel = "noopener"; facts.appendChild(oa); }
+    body.appendChild(facts);
+
+    if (p.abstract) {
+      var abs = el("p", "abstract clamped", p.abstract);
+      body.appendChild(abs);
+      var tog = el("button", "link-btn", "Show full abstract");
+      tog.type = "button";
+      tog.addEventListener("click", function () {
+        var closed = abs.classList.toggle("clamped");
+        tog.textContent = closed ? "Show full abstract" : "Show less";
+      });
+      body.appendChild(tog);
+    }
+    li.appendChild(body);
+    $("results").appendChild(li);
+  }
+
+  // ---------- Selection tray ----------
+  function selectedList() { return Object.keys(state.selected).map(function (k) { return state.selected[k]; }); }
+  function updateTray() {
+    var n = selectedList().length;
+    $("tray").classList.toggle("show", n > 0);
+    $("trayCount").textContent = n + (n === 1 ? " paper selected" : " papers selected");
+  }
+  $("clearSel").addEventListener("click", function () {
+    state.selected = {};
+    document.querySelectorAll(".paper > input[type=checkbox]").forEach(function (c) { c.checked = false; });
+    updateTray();
+  });
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea"); ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
+    }
+    fallbackCopy(text); return Promise.resolve();
+  }
+
+  $("copyClaude").addEventListener("click", function () {
+    var list = selectedList();
+    var lines = [
+      "I’m a senior research analyst writing a report on: " + (state.query || "this topic") + ".",
+      "Below are " + list.length + " papers with their abstracts. Please give me:",
+      "1. A one-paragraph overview of where the research stands.",
+      "2. For each paper: the key finding, the method, and why it matters, in 2–3 sentences.",
+      "3. Common themes, disagreements, and open questions across the papers.",
+      "Base everything only on the abstracts below, and say when an abstract doesn’t support a claim.",
+      ""
+    ];
+    list.forEach(function (p, i) {
+      lines.push("Paper " + (i + 1) + ": " + p.title);
+      lines.push("Authors: " + (p.authors.slice(0, 6).join(", ") || "n/a"));
+      lines.push("Published: " + (p.date || "n/a") + (p.venue ? " in " + p.venue : "") + (p.type === "preprint" ? " (preprint)" : ""));
+      lines.push("Citations: " + p.cites);
+      lines.push("Link: " + p.link);
+      lines.push("Abstract: " + (p.abstract || "Not available"));
+      lines.push("");
+    });
+    copyText(lines.join("\n")).then(function () {
+      var b = $("copyClaude"); b.textContent = "Copied, paste into Claude";
+      setTimeout(function () { b.textContent = "Copy for Claude"; }, 2500);
+    });
+  });
+
+  $("csvBtn").addEventListener("click", function () {
+    var rows = [["Title", "Authors", "Published", "Venue", "Citations", "Type", "Link", "Free full text", "Abstract"]];
+    selectedList().forEach(function (p) {
+      rows.push([p.title, p.authors.join("; "), p.date, p.venue, p.cites, p.type, p.link, p.oa, p.abstract]);
+    });
+    var csv = rows.map(function (r) {
+      return r.map(function (v) { v = String(v == null ? "" : v); return '"' + v.replace(/"/g, '""') + '"'; }).join(",");
+    }).join("\r\n");
+    var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "papers-" + (state.query || "export").replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  // ---------- Connection check ----------
+  function inPreview() {
+    var framed = false;
+    try { framed = window.self !== window.top; } catch (e) { framed = true; }
+    var proto = location.protocol;
+    return framed || (proto !== "file:" && proto !== "http:" && proto !== "https:");
+  }
+  async function diagnose() {
+    if (inPreview()) {
+      return "This page is open inside a preview window that blocks outside connections. Download paper-finder.html to your computer, then double-click it so it opens in Chrome or Edge.";
+    }
+    try {
+      var ping = await fetch(API + "?per-page=1&select=id");
+      if (ping.ok) {
+        return getKey()
+          ? "OpenAlex is reachable, but it refused this search, most likely because of the API key. Open “API key” at the top, remove it, paste a fresh copy from openalex.org/settings/api and save."
+          : "OpenAlex is reachable, but the no-key allowance for today is used up. Add your free OpenAlex key (top right) to keep searching.";
+      }
+      if (ping.status === 409 || ping.status === 429) {
+        return getKey()
+          ? "OpenAlex is reachable, but the search was refused. Check that your saved API key is correct (top right), or try again tomorrow if you’ve used today’s allowance."
+          : "The no-key allowance for today is used up. Add your free OpenAlex key (top right) to keep searching.";
+      }
+      return "OpenAlex answered with an error (" + ping.status + "). It may be having problems; try again in a few minutes.";
+    } catch (e) {
+      return "Your browser can’t reach api.openalex.org. Office networks, VPNs and some ad-blockers block it. Open https://api.openalex.org/works?search=test in a new tab: if that page doesn’t load, try a different network or ask IT to allow api.openalex.org.";
+    }
+  }
+
+  if (window.matchMedia("(min-width: 821px)").matches) $("filters").open = true;
+  refreshKeyUI();
+  if (!getKey()) $("keyPanel").hidden = false;
+  $("q").focus();
+})();
+</script>
+</body>
+</html>
